@@ -1,0 +1,107 @@
+﻿<!DOCTYPE html><html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>多项目倒数计时器</title>
+  <style>
+    body { font-family: sans-serif; padding: .5em; margin:0; background:#f4f4f4; }
+    .container { max-width:600px; margin:auto; background:#fff; padding:1em; border-radius:12px; position:relative; }
+    h1 { text-align:center; font-size:1.2em; margin:.2em 0 1em; }
+    .add-area input, .add-area button { box-sizing:border-box; padding:.5em; font-size:.9em; margin:.3em 0; }
+    .add-area input { width:calc(50% - .6em); margin-right:.6em; }
+    .add-area button { width:100%; background:#0077cc; color:#fff; border:none; border-radius:6px; }
+    .project { background:#fff; padding:1em; margin:.8em 0; border-radius:8px; position:relative; }
+    .sort-up, .sort-down { position:absolute; top:1em; background:#0077cc; color:#fff; border:none; width:28px; height:28px; border-radius:4px; cursor:pointer; }
+    .sort-up { right:3.5em; } .sort-down { right:1em; }
+    .project h2 { margin:0 0 .5em; font-size:1.1em; }
+    .progress-bar { width:100%; height:20px; background:#ddd; border-radius:12px; overflow:hidden; margin:.5em 0; }
+    .progress-fill { height:100%; background:#0077cc; color:#fff; text-align:center; line-height:20px; font-weight:bold; transition:width .3s; }
+    .info { font-size:.9em; margin-bottom:.5em; }
+    .actions {
+        display: flex;
+        gap: 0.6em;
+        margin-bottom: 0.6em;
+    }
+    .actions input {
+        flex: 1;
+        padding: 0.4em;
+        font-size: 0.8em;
+    }
+    .actions .record-btn {
+      background: #28a745;
+      color: white;
+      font-size: 1.6em!important;
+      padding: 0.9em 1em!important;
+      height: 54px!important;
+      flex: 1.2!important;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+    }.actions input { flex:1; padding:.4em; font-size:.8em; }
+.actions .record-btn { flex:1.2; background:#28a745; color:#fff; border:none; border-radius:4px; font-size:1em; cursor:pointer; }
+.func-buttons { display:flex; gap:.5em; }
+.func-buttons button { flex:1; padding:.6em; font-size:.8em; border:none; border-radius:4px; cursor:pointer; color:#fff; }
+.func-buttons .undo-btn   { background:#ccc; color:#000; }
+.func-buttons .reset-btn  { background:#f0ad4e; }
+.func-buttons .rename-btn { background:#f0ad4e; }
+.func-buttons .change-total-btn { background:#007aff; }
+.func-buttons .del-btn    { background:#d9534f; }
+.global-reset { width:100%; background:#d9534f; color:#fff; padding:.6em; border:none; border-radius:6px; margin-top:1em; cursor:pointer; }
+.night-mode-btn { position:absolute; top:1em; right:1em; background:#444; color:#fff; border:none; padding:.5em; border-radius:6px; cursor:pointer; }
+.night-mode { background:#2b2b2b!important; color:#fff!important; }
+.night-mode .container { background:#333!important; }
+.night-mode .project   { background:#444!important; }
+.night-mode .progress-bar   { background:#555!important; }
+.night-mode .progress-fill  { background:#00bcd4!important; }
+
+  </style>
+</head>
+<body id="body">
+  <div class="container">
+    <h1>多项目倒数计时器</h1>
+    <div class="add-area">
+      <input id="newName" placeholder="项目名称">
+      <input id="newTotal" type="number" placeholder="总时间（分钟）">
+      <button onclick="addProject()">添加项目</button>
+    </div>
+    <div id="projectList"></div>
+    <button class="global-reset" onclick="resetAll()">重置所有项目</button>
+    <button class="night-mode-btn" onclick="toggleNightMode()">切换夜间模式</button>
+  </div>
+  <script>
+    const STORAGE_KEY='multiCountdownProjects', NIGHT_MODE_KEY='nightModeEnabled';
+    let projects=JSON.parse(localStorage.getItem(STORAGE_KEY))||[], nightMode=JSON.parse(localStorage.getItem(NIGHT_MODE_KEY))||false;
+    function save(){localStorage.setItem(STORAGE_KEY,JSON.stringify(projects));}
+    function saveNightMode(){localStorage.setItem(NIGHT_MODE_KEY,JSON.stringify(nightMode));}
+    function addProject(){const name=document.getElementById('newName').value.trim(), total=parseInt(document.getElementById('newTotal').value,10); if(!name||isNaN(total)||total<=0)return;projects.push({name,total,used:0,lastAddedTime:0});save();render();document.getElementById('newName').value='';document.getElementById('newTotal').value='';}
+    function recordTime(i){const m=+document.getElementById('add'+i).value; if(!m)return;projects[i].lastAddedTime=m;projects[i].used=Math.min(projects[i].total,projects[i].used+m);save();render();}
+    function undoLast(i){projects[i].used=Math.max(0,projects[i].used-projects[i].lastAddedTime);projects[i].lastAddedTime=0;save();render();}
+    function resetProject(i){if(!confirm(`重置 "${projects[i].name}"？`))return;projects[i].used=0;save();render();}
+    function deleteProject(i){if(!confirm(`删除 "${projects[i].name}"？`))return;projects.splice(i,1);save();render();}
+    function renameProject(i){const n=prompt('新名称：',projects[i].name);if(n){projects[i].name=n;save();render();}}
+    function changeTotal(i){const t=parseInt(prompt('新总时间（分钟）：',projects[i].total),10);if(!isNaN(t)&&t>0){projects[i].total=t; if(projects[i].used>t)projects[i].used=t;save();render();}}
+    function moveProject(i,d){const t=i+d; if(t<0||t>=projects.length)return;[projects[i],projects[t]]=[projects[t],projects[i]];save();render();}
+    function resetAll(){if(!confirm('重置所有项目？'))return;projects.forEach(p=>p.used=0);save();render();}
+    function toggleNightMode(){nightMode=!nightMode;saveNightMode();document.body.classList.toggle('night-mode',nightMode);}    
+    function render(){document.body.classList.toggle('night-mode',nightMode);const list=document.getElementById('projectList');list.innerHTML=''; projects.forEach((p,i)=>{const r=p.total-p.used, pct=Math.round(r/p.total*100); const d=document.createElement('div');d.className='project';d.innerHTML=`
+      <h2>${p.name}</h2>
+      <button class="sort-up" onclick="moveProject(${i},-1)">↑</button>
+      <button class="sort-down" onclick="moveProject(${i},1)">↓</button>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%">${pct}%</div></div>
+      <div class="info">总 ${p.total}m | 已 ${p.used}m | 剩 ${r}m</div>
+      <div class="actions">
+        <input id="add${i}" type="number" placeholder="分钟">
+        <button class="record-btn" onclick="recordTime(${i})">记录</button>
+      </div>
+      <div class="func-buttons">
+        <button class="undo-btn" onclick="undoLast(${i})">撤销</button>
+        <button class="reset-btn" onclick="resetProject(${i})">重置</button>
+        <button class="rename-btn" onclick="renameProject(${i})">重命名</button>
+        <button class="change-total-btn" onclick="changeTotal(${i})">修改总时</button>
+        <button class="del-btn" onclick="deleteProject(${i})">删除</button>
+      </div>
+    `;list.appendChild(d);});}
+    document.body.classList.toggle('night-mode',nightMode);render();
+  </script>
+</body>
+</html>
