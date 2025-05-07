@@ -1,8 +1,9 @@
-﻿<!DOCTYPE html><html lang="ja">
+﻿<!DOCTYPE html>
+<html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>多项目倒数计时器</title>
+  <title>多项目计时器</title>
   <style>
     body {
       margin: 0;
@@ -68,8 +69,7 @@
     }
     .sort-up { right: 3em; }
     .sort-down { right: 1em; }
-    .progress-container {
-      position: relative;
+    .progress-bar {
       background: #e5e5ea;
       border-radius: 12px;
       overflow: hidden;
@@ -83,21 +83,7 @@
       text-align: center;
       line-height: 20px;
       font-weight: bold;
-      white-space: nowrap;
       transition: width 0.3s;
-    }
-    .progress-over {
-      position: absolute;
-      top: 0;
-      left: 100%;
-      height: 100%;
-      background: #ff3b30;
-      color: white;
-      text-align: center;
-      line-height: 20px;
-      font-weight: bold;
-      white-space: nowrap;
-      padding-left: 5px;
     }
     .info {
       font-size: 0.9em;
@@ -118,7 +104,7 @@
     }
     .actions .record-btn {
       flex: 1.5;
-      background: #28a745;
+      background: #007aff;
       color: white;
       border: none;
       border-radius: 8px;
@@ -141,7 +127,8 @@
       cursor: pointer;
     }
     .undo-btn { background: #ccc; color: black; }
-    .reset-btn, .rename-btn { background: #f0ad4e; }
+    .reset-btn { background: #f0ad4e; }
+    .rename-btn { background: #28a745; }
     .change-total-btn { background: #007aff; }
     .del-btn { background: #d9534f; }
     .global-reset {
@@ -174,20 +161,17 @@
     .night-mode .project {
       background: #2c2c2e;
     }
-    .night-mode .progress-container {
+    .night-mode .progress-bar {
       background: #3a3a3c;
     }
     .night-mode .progress-fill {
       background: #0a84ff;
     }
-    .night-mode .progress-over {
-      background: #ff453a;
-    }
   </style>
 </head>
 <body id="body">
   <div class="container">
-    <h1>多项目倒数计时器</h1>
+    <h1>多项目计时器</h1>
     <div class="add-area">
       <input id="newName" placeholder="项目名称" />
       <input id="newTotal" type="number" placeholder="总时间（分钟）" />
@@ -214,7 +198,7 @@
       const m = +document.getElementById('add' + i).value;
       if (!m) return;
       projects[i].lastAddedTime = m;
-      projects[i].used = projects[i].used + m;
+      projects[i].used += m;
       save(); render();
     }
     function undoLast(i) {
@@ -240,7 +224,6 @@
       const t = parseInt(prompt('新总时间（分钟）：', projects[i].total), 10);
       if (!isNaN(t) && t > 0) {
         projects[i].total = t;
-        if (projects[i].used > t) projects[i].used = t;
         save(); render();
       }
     }
@@ -265,31 +248,25 @@
       const list = document.getElementById('projectList');
       list.innerHTML = '';
       projects.forEach((p, i) => {
-        const r = p.total - p.used;
-        const pct = (p.used / p.total) * 100;
-        const cappedPct = Math.min(pct, 100);
-        const overPct = pct > 100 ? pct - 100 : 0;
+        const r = p.total - p.used, pct = Math.round((p.used / p.total) * 100);
         const d = document.createElement('div');
         d.className = 'project';
         d.innerHTML = `
           <h2>${p.name}</h2>
-          <div class="info">已用：${p.used} 分钟 / 总计：${p.total} 分钟（剩余：${Math.max(0, r)} 分钟）</div>
-          <div class="progress-container">
-            <div class="progress-fill" style="width: ${cappedPct}%; z-index:1;">${Math.floor(pct)}%</div>
-            ${overPct > 0 ? `<div class="progress-over" style="width: ${overPct}%">+${Math.floor(overPct)}%</div>` : ''}
-          </div>
+          <button class="sort-up" onclick="moveProject(${i}, -1)">↑</button>
+          <button class="sort-down" onclick="moveProject(${i}, 1)">↓</button>
+          <div class="info">已用 ${p.used} 分钟 / 总共 ${p.total} 分钟（剩余 ${r < 0 ? 0 : r} 分钟）</div>
+          <div class="progress-bar"><div class="progress-fill" style="width:${Math.min((p.used / p.total) * 100, 125)}%">${pct}%</div></div>
           <div class="actions">
-            <input id="add${i}" type="number" placeholder="追加分钟数" />
+            <input id="add${i}" type="number" placeholder="记录分钟数" />
             <button class="record-btn" onclick="recordTime(${i})">记录</button>
           </div>
           <div class="func-buttons">
             <button class="undo-btn" onclick="undoLast(${i})">撤销</button>
-            <button class="reset-btn" onclick="resetProject(${i})">重置</button>
+            <button class="reset-btn" onclick="resetProject(${i})">清零</button>
             <button class="rename-btn" onclick="renameProject(${i})">改名</button>
-            <button class="change-total-btn" onclick="changeTotal(${i})">改总数</button>
+            <button class="change-total-btn" onclick="changeTotal(${i})">修改总数</button>
             <button class="del-btn" onclick="deleteProject(${i})">删除</button>
-            <button class="sort-up" onclick="moveProject(${i}, -1)">↑</button>
-            <button class="sort-down" onclick="moveProject(${i}, 1)">↓</button>
           </div>
         `;
         list.appendChild(d);
