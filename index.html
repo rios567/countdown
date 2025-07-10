@@ -221,12 +221,15 @@
     }
 
     function addTime(i, min) {
-      const v = parseInt(min);
-      if (!isNaN(v) && v > 0) {
-        data[i].time += v;
-        data[i].history.unshift(v);
-        save();
-      }
+  const v = parseInt(min);
+  if (!isNaN(v) && v > 0) {
+    data[i].time += v;
+    data[i].history.unshift(v);
+    save();
+    // 清空输入框
+    document.getElementById(`t-${i}`).value = '';
+  }
+}
     }
 
     function render() {
